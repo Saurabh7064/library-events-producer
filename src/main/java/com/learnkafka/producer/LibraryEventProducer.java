@@ -12,6 +12,9 @@ import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import javax.annotation.Resource;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Component
 @Slf4j
@@ -24,6 +27,7 @@ public class LibraryEventProducer {
     @Autowired
     ObjectMapper objectMapper;
 
+    /*This is async way of sending messages to topic*/
     public void sendLibraryEvent(LibraryEvent libraryEvent) throws JsonProcessingException {
 
         Integer key = libraryEvent.getLibraryEventId();
@@ -45,6 +49,25 @@ public class LibraryEventProducer {
         });
 
     }
+    /*This is sync way of sending messages to topic*/
+    public SendResult<Integer, String> sendLibraryEventSynchronous(LibraryEvent libraryEvent) throws JsonProcessingException, ExecutionException, InterruptedException, TimeoutException {
+
+        Integer key = libraryEvent.getLibraryEventId();
+        String value = objectMapper.writeValueAsString(libraryEvent);
+        SendResult<Integer,String> sendResult=null;
+        try {
+            sendResult = kafkaTemplate.sendDefault(key,value).get(1, TimeUnit.SECONDS);
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("ExecutionException/InterruptedException Sending the Message and the exception is {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Exception Sending the Message and the exception is {}", e.getMessage());
+            throw e;
+        }
+
+        return sendResult;
+
+    }
 
     private void handleFailure(Integer key, String value, Throwable ex) {
         log.error("Error Sending the Message and the exception is {}", ex.getMessage());
@@ -53,8 +76,6 @@ public class LibraryEventProducer {
         } catch (Throwable throwable) {
             log.error("Error in OnFailure: {}", throwable.getMessage());
         }
-
-
     }
 
     private void handleSuccess(Integer key, String value, SendResult<Integer, String> result) {
