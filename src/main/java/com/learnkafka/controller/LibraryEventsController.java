@@ -1,4 +1,4 @@
-package com.learnkafka;
+package com.learnkafka.controller;
 
 import com.learnkafka.domain.LibraryEvent;
 import org.springframework.http.HttpStatus;
